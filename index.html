@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>컨설팅 예약 시스템</title>
+
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <!-- 홈 화면 -->
+      <div id="home" class="card">
+        <h1>수학의 아침 X i.study [수리탐구]</h1>
+        <h2>개별 컨설팅 예약 시스템</h2>
+
+        <div class="info-box">
+          <p>
+            본 예약은 수학의 아침 수내캠퍼스 설명회를 참석하신 학부모님을
+            대상으로 진행되는 아이스터디 이시용 대표와의 1:1 개별 컨설팅 예약
+            시스템입니다.
+          </p>
+          <br />
+          <p>예약 완료 후에는 일정 변경이 불가하며, 취소만 가능합니다.</p>
+        </div>
+
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="showScreen('info')">
+            개별 컨설팅 예약하기
+          </button>
+          <button class="btn btn-secondary" onclick="showScreen('check')">
+            예약 확인하기
+          </button>
+        </div>
+      </div>
+
+      <!-- 개인정보 입력 -->
+      <div id="info" class="card hidden">
+        <button class="btn btn-back" onclick="showScreen('home')">
+          ← 뒤로
+        </button>
+        <h2>개별 컨설팅 예약하기</h2>
+        <p style="margin-bottom: 20px; color: #666">개인정보를 입력해주세요.</p>
+
+        <form id="infoForm">
+          <div class="form-group">
+            <label>학생명</label>
+            <input type="text" id="studentName" required />
+          </div>
+
+          <div class="form-group">
+            <label>학부모 연락처</label>
+            <input
+              type="tel"
+              id="parentPhone"
+              placeholder="010-0000-0000"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>학교</label>
+            <input type="text" id="school" required />
+          </div>
+
+          <div class="form-group">
+            <label>학년</label>
+            <select id="grade" required>
+              <option value="">선택하세요</option>
+              <option value="초1">초등학교 1학년</option>
+              <option value="초2">초등학교 2학년</option>
+              <option value="초3">초등학교 3학년</option>
+              <option value="초4">초등학교 4학년</option>
+              <option value="초5">초등학교 5학년</option>
+              <option value="초6">초등학교 6학년</option>
+              <option value="중1">중학교 1학년</option>
+              <option value="중2">중학교 2학년</option>
+              <option value="중3">중학교 3학년</option>
+              <option value="고1">고등학교 1학년</option>
+              <option value="고2">고등학교 2학년</option>
+              <option value="고3">고등학교 3학년</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>수학 선행정도</label>
+            <input
+              type="text"
+              id="mathLevel"
+              placeholder="예: 중2 과정 진행중"
+              required
+            />
+          </div>
+
+          <button type="submit" class="btn btn-primary">다음</button>
+        </form>
+      </div>
+
+      <!-- 날짜 선택 -->
+      <div id="date" class="card hidden">
+        <button class="btn btn-back" onclick="showScreen('info')">
+          ← 뒤로
+        </button>
+        <h2>개별 컨설팅 예약하기</h2>
+        <p style="margin-bottom: 20px; color: #666">
+          컨설팅을 원하는 날짜를 선택해주세요.
+        </p>
+
+        <div class="btn-group" id="dateButtons">
+          <div class="loading">날짜를 불러오는 중...</div>
+        </div>
+      </div>
+
+      <!-- 시간 선택 -->
+      <div id="time" class="card hidden">
+        <button class="btn btn-back" onclick="showScreen('date')">
+          ← 뒤로
+        </button>
+        <h2>개별 컨설팅 예약하기</h2>
+        <p style="margin-bottom: 20px; color: #666">
+          컨설팅을 원하는 시간을 선택해주세요.
+        </p>
+
+        <div class="info-box" id="selectedDateInfo"></div>
+
+        <div id="timeSlots" class="time-grid"></div>
+
+        <button
+          class="btn btn-primary"
+          onclick="confirmReservation()"
+          style="margin-top: 20px; display: none"
+          id="confirmBtn"
+        >
+          예약 확정
+        </button>
+      </div>
+
+      <!-- 예약 완료 -->
+      <div id="complete" class="card hidden">
+        <div class="success-icon">✅</div>
+        <h2>감사합니다.</h2>
+        <p style="text-align: center; margin-bottom: 20px; color: #666">
+          예약이 완료되었습니다.
+        </p>
+
+        <div class="info-box">
+          <p>
+            본 예약은 수학의 아침 수내캠퍼스 설명회를 참석하신 학부모님을
+            대상으로 진행되는 아이스터디 이시용 대표와의 1:1 개별 컨설팅 예약
+            시스템입니다.
+          </p>
+          <br />
+          <p>예약 완료 후에는 일정 변경이 불가하며, 취소만 가능합니다.</p>
+        </div>
+
+        <button class="btn btn-primary" onclick="showScreen('home')">
+          홈으로 돌아가기
+        </button>
+      </div>
+
+      <!-- 예약 확인 -->
+      <div id="check" class="card hidden">
+        <button class="btn btn-back" onclick="showScreen('home')">
+          ← 뒤로
+        </button>
+        <h2>예약 확인하기</h2>
+        <p style="margin-bottom: 20px; color: #666">
+          예약자 연락처를 입력해주세요.
+        </p>
+
+        <form id="checkForm">
+          <div class="form-group">
+            <label>학부모 연락처</label>
+            <input
+              type="tel"
+              id="checkPhone"
+              placeholder="010-0000-0000"
+              required
+            />
+          </div>
+
+          <button type="submit" class="btn btn-primary">예약 확인하기</button>
+        </form>
+      </div>
+
+      <!-- 예약 조회 결과 -->
+      <div id="result" class="card hidden">
+        <button class="btn btn-back" onclick="showScreen('home')">
+          ← 뒤로
+        </button>
+        <h2>예약 정보</h2>
+
+        <div class="reservation-info" id="reservationInfo"></div>
+
+        <div class="btn-group">
+          <button
+            class="btn btn-primary"
+            style="background: #d32f2f"
+            onclick="cancelReservation()"
+          >
+            예약 취소하기
+          </button>
+          <button class="btn btn-secondary" onclick="showScreen('home')">
+            홈으로 돌아가기
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/script.js"></script>
+  </body>
+</html>

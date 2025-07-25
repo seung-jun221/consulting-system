@@ -1,0 +1,2981 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>예약 현황 모니터링 - 수학의 아침 X i.study</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          sans-serif;
+        background-color: #f5f5f5;
+        color: #333;
+      }
+
+      .header {
+        background: #1a73e8;
+        color: white;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .header h1 {
+        text-align: center;
+        font-size: 24px;
+        margin-bottom: 10px;
+      }
+
+      .last-update {
+        text-align: center;
+        font-size: 14px;
+        opacity: 0.9;
+      }
+
+      .auto-refresh-status {
+        text-align: center;
+        font-size: 12px;
+        opacity: 0.8;
+        margin-top: 5px;
+      }
+
+      .auto-refresh-status.paused {
+        color: #ffc107;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      /* 검색 섹션 스타일 */
+      .search-section {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+      }
+
+      .search-header {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 15px;
+        color: #333;
+      }
+
+      .search-controls {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: end;
+      }
+
+      .search-group {
+        flex: 1;
+        min-width: 200px;
+      }
+
+      .search-label {
+        display: block;
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 5px;
+        font-weight: 500;
+      }
+
+      .search-input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: all 0.3s;
+      }
+
+      .search-input:focus {
+        outline: none;
+        border-color: #1a73e8;
+        box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+      }
+
+      .search-buttons {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .search-btn {
+        padding: 10px 20px;
+        background: #1a73e8;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      .search-btn:hover {
+        background: #1557b0;
+      }
+
+      .search-btn.secondary {
+        background: #666;
+      }
+
+      .search-btn.secondary:hover {
+        background: #555;
+      }
+
+      .search-scope {
+        display: flex;
+        gap: 15px;
+        margin-top: 15px;
+        align-items: center;
+      }
+
+      .search-scope label {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      .search-scope input[type='radio'] {
+        cursor: pointer;
+      }
+
+      .search-results-info {
+        margin-top: 15px;
+        padding: 10px 15px;
+        background: #e3f2fd;
+        border-radius: 8px;
+        font-size: 14px;
+        color: #1a73e8;
+        font-weight: 500;
+        display: none;
+      }
+
+      .highlight {
+        background-color: #fff3cd;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-weight: 600;
+      }
+
+      /* 구글폼 예약 표시 스타일 */
+      .google-form-badge {
+        display: inline-block;
+        font-size: 14px;
+        margin-right: 5px;
+        color: #f9ab00;
+        vertical-align: middle;
+        position: relative;
+        top: -1px;
+      }
+
+      /* 등록 상태 표시 스타일 */
+      .registration-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        position: relative;
+      }
+
+      .registration-indicator:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      .registration-indicator.none {
+        background: #e0e0e0;
+        color: #666;
+      }
+
+      .registration-indicator.confirmed {
+        background: #4caf50;
+        color: white;
+      }
+
+      .registration-indicator.considering {
+        background: #ff9800;
+        color: white;
+      }
+
+      .registration-indicator.not-interested {
+        background: #f44336;
+        color: white;
+      }
+
+      .registration-indicator.not-eligible {
+        background: #9e9e9e;
+        color: white;
+      }
+
+      /* Optimistic UI 표시 */
+      .registration-indicator.updating {
+        opacity: 0.6;
+        pointer-events: none;
+      }
+
+      .registration-indicator.updating::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 12px;
+        height: 12px;
+        border: 2px solid white;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+
+      /* 등록 상태 팝업 스타일 */
+      .registration-popup {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        z-index: 2000;
+        min-width: 300px;
+        display: none;
+      }
+
+      .registration-popup.show {
+        display: block;
+        animation: popupFadeIn 0.3s ease-out;
+      }
+
+      @keyframes popupFadeIn {
+        from {
+          opacity: 0;
+          transform: translate(-50%, -45%);
+        }
+        to {
+          opacity: 1;
+          transform: translate(-50%, -50%);
+        }
+      }
+
+      .popup-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1999;
+        display: none;
+      }
+
+      .popup-overlay.show {
+        display: block;
+      }
+
+      .popup-header {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 20px;
+        color: #333;
+        text-align: center;
+      }
+
+      .registration-options {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .registration-option {
+        padding: 12px 20px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-align: center;
+        font-weight: 500;
+      }
+
+      .registration-option:hover {
+        border-color: #1a73e8;
+        background: #f0f7ff;
+      }
+
+      .registration-option.confirmed {
+        border-color: #4caf50;
+        color: #4caf50;
+      }
+
+      .registration-option.confirmed:hover {
+        background: #e8f5e9;
+      }
+
+      .registration-option.considering {
+        border-color: #ff9800;
+        color: #ff9800;
+      }
+
+      .registration-option.considering:hover {
+        background: #fff3e0;
+      }
+
+      .registration-option.not-interested {
+        border-color: #f44336;
+        color: #f44336;
+      }
+
+      .registration-option.not-interested:hover {
+        background: #ffebee;
+      }
+
+      .registration-option.not-eligible {
+        border-color: #9e9e9e;
+        color: #9e9e9e;
+      }
+
+      .registration-option.not-eligible:hover {
+        background: #f5f5f5;
+      }
+
+      .popup-close {
+        margin-top: 15px;
+        padding: 10px 20px;
+        background: #666;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        width: 100%;
+        font-weight: 500;
+      }
+
+      .popup-close:hover {
+        background: #555;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+
+      .stat-card {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: #1a73e8;
+      }
+
+      .stat-card.completed::before {
+        background: #4caf50;
+      }
+
+      .stat-card.pending::before {
+        background: #ff6b35;
+      }
+
+      .stat-card.available::before {
+        background: #2196f3;
+      }
+
+      .stat-card.noshow::before {
+        background: #f44336;
+      }
+
+      .stat-card.attendance::before {
+        background: #9c27b0;
+      }
+
+      .stat-number {
+        font-size: 36px;
+        font-weight: bold;
+        color: #1a73e8;
+        margin-bottom: 5px;
+      }
+
+      .stat-card.completed .stat-number {
+        color: #4caf50;
+      }
+
+      .stat-card.pending .stat-number {
+        color: #ff6b35;
+      }
+
+      .stat-card.available .stat-number {
+        color: #2196f3;
+      }
+
+      .stat-card.noshow .stat-number {
+        color: #f44336;
+      }
+
+      .stat-card.attendance .stat-number {
+        color: #9c27b0;
+      }
+
+      .stat-label {
+        color: #666;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .stat-sublabel {
+        font-size: 12px;
+        color: #999;
+        margin-top: 5px;
+      }
+
+      .date-tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+
+      .date-tab {
+        padding: 10px 20px;
+        background: white;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.3s;
+        position: relative;
+      }
+
+      .date-tab:hover {
+        border-color: #1a73e8;
+      }
+
+      .date-tab.active {
+        background: #1a73e8;
+        color: white;
+        border-color: #1a73e8;
+      }
+
+      .date-tab.active .tab-badge {
+        background: rgba(255, 255, 255, 0.3);
+        color: white;
+      }
+
+      .date-tab.past {
+        background: #f5f5f5;
+        opacity: 0.7;
+      }
+
+      .date-tab.today {
+        border-color: #4caf50;
+        position: relative;
+      }
+
+      .date-tab.today::after {
+        content: '오늘';
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: #4caf50;
+        color: white;
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-weight: 600;
+      }
+
+      .tab-badge {
+        display: inline-block;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-size: 10px;
+        font-weight: 600;
+        margin-left: 5px;
+        vertical-align: top;
+      }
+
+      .badge-green {
+        background: #4caf50;
+        color: white;
+      }
+
+      .badge-orange {
+        background: #ff6b35;
+        color: white;
+      }
+
+      .badge-gray {
+        background: #666;
+        color: white;
+      }
+
+      .schedule-container {
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .schedule-header {
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 20px;
+        color: #333;
+      }
+
+      .time-slots {
+        display: grid;
+        gap: 10px;
+      }
+
+      .time-slot {
+        display: grid;
+        grid-template-columns: 100px 1fr;
+        gap: 20px;
+        padding: 15px;
+        border-radius: 8px;
+        background: #f8f9fa;
+        align-items: center;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      .time-slot:hover {
+        background: #f0f7ff;
+      }
+
+      .time-slot.reserved {
+        background: #e3f2fd;
+        border-left: 4px solid #1a73e8;
+      }
+
+      .time-slot.reserved.expanded {
+        background: #d1e7fd;
+      }
+
+      .time-slot.completed {
+        background: #e8f5e9;
+        border-left: 4px solid #4caf50;
+      }
+
+      .time-slot.no-show {
+        background: #ffebee;
+        border-left: 4px solid #f44336;
+        opacity: 0.9;
+      }
+
+      .time-slot.empty {
+        background: #f5f5f5;
+        opacity: 0.7;
+        cursor: default;
+      }
+
+      .time-slot.empty:hover {
+        background: #f5f5f5;
+      }
+
+      .time-slot.search-hidden {
+        display: none;
+      }
+
+      .time-label {
+        font-weight: bold;
+        color: #1a73e8;
+      }
+
+      .time-slot.completed .time-label {
+        color: #4caf50;
+      }
+
+      .time-slot.no-show .time-label {
+        color: #f44336;
+      }
+
+      .reservation-content {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        width: 100%;
+      }
+
+      .reservation-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+      }
+
+      .reservation-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 12px;
+        flex: 1;
+      }
+
+      .reservation-indicators {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-left: 20px;
+      }
+
+      .memo-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+        padding: 3px 8px;
+        border-radius: 12px;
+        background: #f5f5f5;
+        color: #666;
+        position: relative;
+      }
+
+      .memo-indicator.has-memo {
+        background: #e3f2fd;
+        color: #1a73e8;
+        font-weight: 600;
+      }
+
+      .memo-indicator.saving {
+        opacity: 0.6;
+      }
+
+      .memo-indicator.saving::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        right: 5px;
+        transform: translateY(-50%);
+        width: 8px;
+        height: 8px;
+        border: 1px solid #1a73e8;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+
+      .status-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-weight: 600;
+      }
+
+      .status-indicator.completed {
+        background: #4caf50;
+        color: white;
+      }
+
+      .status-indicator.no-show {
+        background: #f44336;
+        color: white;
+      }
+
+      .expand-arrow {
+        font-size: 10px;
+        color: #999;
+        transition: transform 0.3s;
+        flex-shrink: 0;
+      }
+
+      .time-slot.expanded .expand-arrow {
+        transform: rotate(180deg);
+      }
+
+      .info-item {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .info-label {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 2px;
+      }
+
+      .info-value {
+        font-weight: 500;
+        color: #333;
+      }
+
+      .info-value.math-level {
+        background: #e3f2fd;
+        padding: 2px 6px;
+        border-radius: 4px;
+        color: #1a73e8;
+        font-weight: 600;
+      }
+
+      .memo-section {
+        border-top: 1px solid #ddd;
+        padding-top: 15px;
+        margin-top: 5px;
+        display: none;
+        animation: slideDown 0.3s ease-out;
+      }
+
+      .time-slot.expanded .memo-section {
+        display: block;
+      }
+
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .memo-label {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 8px;
+        font-weight: 600;
+      }
+
+      .memo-input {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+        font-family: inherit;
+        resize: vertical;
+        min-height: 40px;
+      }
+
+      .memo-input:focus {
+        outline: none;
+        border-color: #1a73e8;
+        box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+      }
+
+      .memo-input.has-unsaved-changes {
+        background-color: #fffacd;
+      }
+
+      .action-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+      }
+
+      .memo-save-btn,
+      .status-btn {
+        padding: 6px 16px;
+        border: none;
+        border-radius: 6px;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-weight: 500;
+        position: relative;
+      }
+
+      .memo-save-btn {
+        background: #1a73e8;
+        color: white;
+      }
+
+      .memo-save-btn:hover {
+        background: #1557b0;
+      }
+
+      .memo-save-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .memo-save-btn.success {
+        background: #4caf50;
+      }
+
+      /* Optimistic update 표시 */
+      .memo-save-btn.saving::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        right: 8px;
+        transform: translateY(-50%);
+        width: 12px;
+        height: 12px;
+        border: 2px solid white;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+
+      .status-btn.no-show {
+        background: #f44336;
+        color: white;
+      }
+
+      .status-btn.no-show:hover {
+        background: #d32f2f;
+      }
+
+      .status-btn.completed {
+        background: #4caf50;
+        color: white;
+      }
+
+      .status-btn.completed:hover {
+        background: #388e3c;
+      }
+
+      .status-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+
+      .status-btn.updating {
+        opacity: 0.6;
+        pointer-events: none;
+      }
+
+      .empty-slot {
+        color: #999;
+        font-style: italic;
+      }
+
+      .refresh-btn {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        background: #1a73e8;
+        color: white;
+        border: none;
+        padding: 15px 25px;
+        border-radius: 50px;
+        font-size: 16px;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
+        transition: all 0.3s;
+      }
+
+      .refresh-btn:hover {
+        background: #1557b0;
+        transform: translateY(-2px);
+      }
+
+      .loading {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+      }
+
+      .spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #1a73e8;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px;
+      }
+
+      .no-data {
+        text-align: center;
+        padding: 40px;
+        color: #999;
+      }
+
+      .no-search-results {
+        text-align: center;
+        padding: 60px 20px;
+        color: #666;
+      }
+
+      .no-search-results h3 {
+        font-size: 18px;
+        margin-bottom: 10px;
+        color: #333;
+      }
+
+      .date-divider {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 2px solid #e0e0e0;
+      }
+
+      .date-divider:first-child {
+        margin-top: 0;
+        padding-top: 0;
+        border-top: none;
+      }
+
+      .date-divider h3 {
+        color: #1a73e8;
+        margin-bottom: 15px;
+        font-size: 18px;
+      }
+
+      .toast {
+        position: fixed;
+        bottom: 100px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #333;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        opacity: 0;
+        transition: opacity 0.3s;
+        z-index: 1000;
+      }
+
+      .toast.show {
+        opacity: 0.9;
+      }
+
+      .toast.error {
+        background: #d32f2f;
+      }
+
+      .toast.success {
+        background: #388e3c;
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          padding: 10px;
+        }
+
+        .search-controls {
+          flex-direction: column;
+        }
+
+        .search-group {
+          width: 100%;
+        }
+
+        .search-buttons {
+          width: 100%;
+          justify-content: space-between;
+        }
+
+        .schedule-container {
+          padding: 20px;
+        }
+
+        .time-slot {
+          grid-template-columns: 80px 1fr;
+          gap: 10px;
+          padding: 10px;
+        }
+
+        .reservation-header {
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .reservation-indicators {
+          margin-left: 0;
+          width: auto;
+        }
+
+        .refresh-btn {
+          bottom: 20px;
+          right: 20px;
+          padding: 12px 20px;
+          font-size: 14px;
+        }
+
+        .stats-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .reservation-info {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .mobile-hide {
+          display: none;
+        }
+
+        .action-buttons {
+          flex-direction: column;
+        }
+
+        .status-btn,
+        .memo-save-btn {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>예약 현황 모니터링</h1>
+      <div class="last-update" id="lastUpdate">마지막 업데이트: -</div>
+      <div class="auto-refresh-status" id="autoRefreshStatus">
+        자동 새로고침: 활성
+      </div>
+    </div>
+
+    <div class="container">
+      <!-- 통계 카드 - 6개로 확장 -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-number" id="totalReservations">0</div>
+          <div class="stat-label">총 예약수</div>
+          <div class="stat-sublabel">전체 예약 건수</div>
+        </div>
+        <div class="stat-card available">
+          <div class="stat-number" id="availableSlots">0</div>
+          <div class="stat-label">잔여 예약수</div>
+          <div class="stat-sublabel">예약 가능한 시간</div>
+        </div>
+        <div class="stat-card completed">
+          <div class="stat-number" id="completedConsultations">0</div>
+          <div class="stat-label">컨설팅 완료</div>
+          <div class="stat-sublabel" id="completedDateRange">-</div>
+        </div>
+        <div class="stat-card pending">
+          <div class="stat-number" id="pendingConsultations">0</div>
+          <div class="stat-label">컨설팅 예정</div>
+          <div class="stat-sublabel" id="pendingDateRange">오늘 포함</div>
+        </div>
+        <div class="stat-card noshow">
+          <div class="stat-number" id="noShowCount">0</div>
+          <div class="stat-label">노쇼 건수</div>
+          <div class="stat-sublabel">미참석 예약</div>
+        </div>
+        <div class="stat-card attendance">
+          <div class="stat-number" id="attendanceRate">-</div>
+          <div class="stat-label">실제 참석률</div>
+          <div class="stat-sublabel">완료/(완료+노쇼)</div>
+        </div>
+      </div>
+
+      <!-- 검색 섹션 -->
+      <div class="search-section">
+        <div class="search-header">🔍 예약 검색</div>
+        <div class="search-controls">
+          <div class="search-group">
+            <label class="search-label">학생명</label>
+            <input
+              type="text"
+              class="search-input"
+              id="searchStudentName"
+              placeholder="학생명 입력"
+            />
+          </div>
+          <div class="search-group">
+            <label class="search-label">전화번호 (뒷자리)</label>
+            <input
+              type="text"
+              class="search-input"
+              id="searchPhone"
+              placeholder="뒷자리 4자리"
+              maxlength="4"
+            />
+          </div>
+          <div class="search-group">
+            <label class="search-label">학교</label>
+            <input
+              type="text"
+              class="search-input"
+              id="searchSchool"
+              placeholder="학교명 입력"
+            />
+          </div>
+          <div class="search-buttons">
+            <button class="search-btn" onclick="performSearch()">검색</button>
+            <button class="search-btn secondary" onclick="resetSearch()">
+              초기화
+            </button>
+          </div>
+        </div>
+        <div class="search-scope">
+          <label>
+            <input type="radio" name="searchScope" value="current" checked />
+            현재 날짜만 검색
+          </label>
+          <label>
+            <input type="radio" name="searchScope" value="all" />
+            전체 날짜 검색
+          </label>
+        </div>
+        <div class="search-results-info" id="searchResultsInfo"></div>
+      </div>
+
+      <!-- 날짜 탭 -->
+      <div class="date-tabs" id="dateTabs">
+        <!-- 동적으로 생성됨 -->
+      </div>
+
+      <!-- 스케줄 표시 -->
+      <div class="schedule-container">
+        <div class="schedule-header" id="scheduleHeader">
+          2025년 7월 15일 예약 현황
+        </div>
+        <div style="font-size: 12px; color: #666; margin-bottom: 10px">
+          💡 예약을 클릭하면 메모 작성 및 상태 변경이 가능합니다
+        </div>
+        <div id="scheduleContent">
+          <div class="loading">
+            <div class="spinner"></div>
+            <div>데이터를 불러오는 중...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 새로고침 버튼 -->
+    <button class="refresh-btn" onclick="handleRefresh()">🔄 새로고침</button>
+
+    <!-- 토스트 메시지 -->
+    <div class="toast" id="toast"></div>
+
+    <!-- 등록 상태 팝업 -->
+    <div
+      class="popup-overlay"
+      id="popupOverlay"
+      onclick="closeRegistrationPopup()"
+    ></div>
+    <div class="registration-popup" id="registrationPopup">
+      <div class="popup-header">등록 여부 선택</div>
+      <div class="registration-options">
+        <div
+          class="registration-option confirmed"
+          onclick="updateRegistrationStatus('confirmed')"
+        >
+          ✅ 등록 확정
+        </div>
+        <div
+          class="registration-option considering"
+          onclick="updateRegistrationStatus('considering')"
+        >
+          🤔 등록 고민중
+        </div>
+        <div
+          class="registration-option not-interested"
+          onclick="updateRegistrationStatus('not-interested')"
+        >
+          ❌ 등록 불가 - 관심 없음
+        </div>
+        <div
+          class="registration-option not-eligible"
+          onclick="updateRegistrationStatus('not-eligible')"
+        >
+          🚫 등록 불가 - 대상 아님
+        </div>
+      </div>
+      <button class="popup-close" onclick="closeRegistrationPopup()">
+        닫기
+      </button>
+    </div>
+
+    <script>
+      // ⭐ API URL - 실제 배포 URL로 변경하세요!
+      const API_URL =
+        'https://script.google.com/macros/s/AKfycbwZXY8MD3pW07De_w3o7KSkpHVxbreJxWoopMTBzq9Nuln9CWh0OQubBN06ZhKmpkC14w/exec';
+
+      let currentDate = '2025-07-15';
+      let allReservations = {};
+      let availableDates = [
+        '2025-07-08',
+        '2025-07-15',
+        '2025-07-24',
+        '2025-07-31',
+        '2025-08-02',
+        '2025-08-05',
+        '2025-08-07',
+      ];
+      let searchActive = false;
+      let searchResults = [];
+      let expandedSlots = new Set();
+      let currentRegistrationKey = null;
+      let pendingSaves = new Map(); // 진행 중인 저장 작업 추적
+
+      // 날짜별 시간대 정의 - 7/8 추가, 7/15 수정
+      const timeSlotsByDate = {
+        '2025-07-08': {
+          start: 10 * 60,
+          end: 21.5 * 60,
+          display: '오전 10시 ~ 오후 9시 30분',
+        },
+        '2025-07-15': {
+          start: 10 * 60, // 오전 10시
+          end: 22 * 60, // 오후 10시
+          display: '오전 10시 ~ 오후 10시',
+        },
+        '2025-07-24': {
+          start: 10 * 60,
+          end: 21.5 * 60,
+          display: '오전 10시 ~ 오후 9시 30분',
+        },
+        '2025-07-29': {
+          start: 10 * 60,
+          end: 14 * 60,
+          display: '오전 10시 ~ 오후 2시',
+        },
+        '2025-07-31': {
+          start: 10 * 60,
+          end: 21.5 * 60,
+          display: '오전 10시 ~ 오후 9시 30분',
+        },
+        '2025-08-02': {
+          start: 10 * 60,
+          end: 17 * 60,
+          display: '오전 10시 ~ 오후 7시',
+        },
+        '2025-08-05': {
+          start: 10 * 60,
+          end: 14 * 60,
+          display: '오전 10시 ~ 오후 2시',
+        },
+        '2025-08-07': {
+          start: 10 * 60,
+          end: 20 * 60,
+          display: '오전 10시 ~ 오후 8시',
+        },
+      };
+
+      // 기본 시간대 설정
+      const defaultTimeConfig = {
+        start: 10 * 60,
+        end: 14.5 * 60,
+        display: '오전 10시 ~ 오후 2시 30분',
+      };
+
+      // 등록 상태 팝업 표시
+      function showRegistrationPopup(key) {
+        currentRegistrationKey = key;
+        document.getElementById('popupOverlay').classList.add('show');
+        document.getElementById('registrationPopup').classList.add('show');
+      }
+
+      // 등록 상태 팝업 닫기
+      function closeRegistrationPopup() {
+        document.getElementById('popupOverlay').classList.remove('show');
+        document.getElementById('registrationPopup').classList.remove('show');
+        currentRegistrationKey = null;
+      }
+
+      // 등록 상태 업데이트 - Optimistic UI 적용
+      async function updateRegistrationStatus(status) {
+        if (!currentRegistrationKey) return;
+
+        // 로컬 변수에 key 저장
+        const key = currentRegistrationKey;
+
+        // 즉시 UI 업데이트 (Optimistic update)
+        const oldStatus = allReservations[key]?.registrationStatus || 'none';
+
+        // 메모리에 즉시 업데이트
+        if (allReservations[key]) {
+          allReservations[key].registrationStatus = status;
+        }
+
+        // 팝업 즉시 닫기
+        closeRegistrationPopup();
+
+        // UI 즉시 업데이트
+        const indicator = document.querySelector(
+          `[onclick*="${key}"].registration-indicator`
+        );
+        if (indicator) {
+          // 이전 클래스 제거
+          indicator.classList.remove(
+            'none',
+            'confirmed',
+            'considering',
+            'not-interested',
+            'not-eligible'
+          );
+          // 새 클래스 추가
+          indicator.classList.add(status, 'updating');
+          indicator.textContent = getRegistrationStatusText(status);
+        }
+
+        try {
+          const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'text/plain;charset=utf-8',
+            },
+            body: JSON.stringify({
+              action: 'updateRegistrationStatus',
+              key: key,
+              registrationStatus: status,
+            }),
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            showToast('등록 상태가 업데이트되었습니다.', 'success');
+            // updating 클래스 제거
+            if (indicator) {
+              indicator.classList.remove('updating');
+            }
+          } else {
+            // 실패시 롤백
+            if (allReservations[key]) {
+              allReservations[key].registrationStatus = oldStatus;
+            }
+
+            // UI 롤백
+            if (indicator) {
+              indicator.classList.remove(
+                'none',
+                'confirmed',
+                'considering',
+                'not-interested',
+                'not-eligible',
+                'updating'
+              );
+              indicator.classList.add(oldStatus);
+              indicator.textContent = getRegistrationStatusText(oldStatus);
+            }
+
+            showToast(
+              '등록 상태 업데이트 실패: ' + (result.message || '오류 발생'),
+              'error'
+            );
+          }
+        } catch (error) {
+          // 에러시 롤백
+          console.error('등록 상태 업데이트 오류:', error);
+
+          if (allReservations[key]) {
+            allReservations[key].registrationStatus = oldStatus;
+          }
+
+          if (indicator) {
+            indicator.classList.remove(
+              'none',
+              'confirmed',
+              'considering',
+              'not-interested',
+              'not-eligible',
+              'updating'
+            );
+            indicator.classList.add(oldStatus);
+            indicator.textContent = getRegistrationStatusText(oldStatus);
+          }
+
+          showToast('등록 상태 업데이트 중 오류가 발생했습니다.', 'error');
+        }
+      }
+
+      // 등록 상태 텍스트 가져오기
+      function getRegistrationStatusText(status) {
+        switch (status) {
+          case 'confirmed':
+            return '등록 확정';
+          case 'considering':
+            return '등록 고민중';
+          case 'not-interested':
+            return '관심 없음';
+          case 'not-eligible':
+            return '대상 아님';
+          default:
+            return '미정';
+        }
+      }
+
+      // 구글폼 예약 확인 함수
+      function isGoogleFormReservation(reservation, key) {
+        return (
+          reservation.memo?.includes('[구글폼') ||
+          key.includes('FORM') ||
+          (reservation.reservationId &&
+            reservation.reservationId.startsWith('FORM'))
+        );
+      }
+
+      // 메모 섹션 토글
+      function toggleMemoSection(event, key) {
+        // 빈 슬롯은 클릭 무시
+        if (!allReservations[key]) return;
+
+        const timeSlot = event.currentTarget;
+        const isExpanded = timeSlot.classList.contains('expanded');
+
+        // 다른 모든 슬롯 접기
+        document.querySelectorAll('.time-slot.expanded').forEach((slot) => {
+          if (slot !== timeSlot) {
+            slot.classList.remove('expanded');
+            slot.setAttribute('aria-expanded', 'false');
+          }
+        });
+
+        // 현재 슬롯 토글
+        timeSlot.classList.toggle('expanded');
+        timeSlot.setAttribute('aria-expanded', !isExpanded);
+
+        // 확장 상태 추적
+        if (!isExpanded) {
+          expandedSlots.add(key);
+          // 메모 입력창에 포커스
+          setTimeout(() => {
+            const memoInput = document.getElementById(`memo-${key}`);
+            if (memoInput) {
+              memoInput.focus();
+            }
+          }, 300);
+        } else {
+          expandedSlots.delete(key);
+        }
+      }
+
+      // 새로고침 버튼 핸들러
+      function handleRefresh() {
+        // 저장하지 않은 메모가 있는지 확인
+        let hasUnsavedMemo = false;
+        document.querySelectorAll('.memo-input').forEach((textarea) => {
+          const key = textarea.id.replace('memo-', '');
+          const originalMemo = allReservations[key]?.memo || '';
+          if (textarea.value !== originalMemo) {
+            hasUnsavedMemo = true;
+          }
+        });
+
+        if (hasUnsavedMemo) {
+          if (confirm('저장하지 않은 메모가 있습니다. 새로고침하시겠습니까?')) {
+            loadData();
+          }
+        } else {
+          loadData();
+        }
+      }
+
+      // 자동 새로고침 설정
+      let autoRefreshInterval;
+      let isEditingMemo = false;
+
+      // 자동 새로고침 시작
+      function startAutoRefresh() {
+        if (autoRefreshInterval) {
+          clearInterval(autoRefreshInterval);
+        }
+        autoRefreshInterval = setInterval(() => {
+          if (!isEditingMemo && pendingSaves.size === 0) {
+            console.log('=== 자동 새로고침 ===');
+            const scrollPos = window.scrollY;
+            loadData()
+              .then(() => {
+                // 스크롤 위치 복원
+                window.scrollTo(0, scrollPos);
+              })
+              .catch((err) => console.error('자동 새로고침 실패:', err));
+          } else {
+            console.log('작업 진행 중 - 자동 새로고침 건너뜀');
+          }
+        }, 30000);
+      }
+
+      // 자동 새로고침 중지
+      function stopAutoRefresh() {
+        if (autoRefreshInterval) {
+          clearInterval(autoRefreshInterval);
+          autoRefreshInterval = null;
+        }
+      }
+
+      // 메모 입력 감지를 위한 이벤트 위임
+      document.addEventListener('focusin', function (e) {
+        if (e.target.classList.contains('memo-input')) {
+          isEditingMemo = true;
+          console.log('메모 편집 시작 - 자동 새로고침 일시 중지');
+          // 임시 저장 표시 제거
+          e.target.style.backgroundColor = '';
+          // 자동 새로고침 상태 업데이트
+          const statusEl = document.getElementById('autoRefreshStatus');
+          statusEl.textContent = '자동 새로고침: 일시 중지 (메모 편집 중)';
+          statusEl.classList.add('paused');
+        }
+      });
+
+      document.addEventListener('focusout', function (e) {
+        if (e.target.classList.contains('memo-input')) {
+          // 포커스를 잃었을 때 잠시 대기 (저장 버튼 클릭 처리를 위해)
+          setTimeout(() => {
+            const anyMemoFocused = document.querySelector('.memo-input:focus');
+            if (!anyMemoFocused) {
+              isEditingMemo = false;
+              console.log('메모 편집 종료 - 자동 새로고침 재개');
+              // 자동 새로고침 상태 업데이트
+              const statusEl = document.getElementById('autoRefreshStatus');
+              statusEl.textContent = '자동 새로고침: 활성';
+              statusEl.classList.remove('paused');
+            }
+          }, 200);
+        }
+      });
+
+      // 자동 새로고침 시작
+      startAutoRefresh();
+
+      // 노쇼 처리 함수 - Optimistic UI 적용
+      async function markAsNoShow(key) {
+        if (!confirm('이 예약을 노쇼 처리하시겠습니까?')) {
+          return;
+        }
+
+        const button = event.target;
+        const timeSlot = button.closest('.time-slot');
+        const oldStatus = allReservations[key]?.status || 'reserved';
+
+        // Optimistic UI 업데이트
+        button.classList.add('updating');
+        button.textContent = '처리중...';
+
+        // 즉시 UI 변경
+        timeSlot.classList.remove('reserved', 'completed');
+        timeSlot.classList.add('no-show');
+
+        // 메모리 업데이트
+        if (allReservations[key]) {
+          allReservations[key].status = 'noshow';
+        }
+
+        // 상태 인디케이터 추가
+        const indicatorsContainer = timeSlot.querySelector(
+          '.reservation-indicators'
+        );
+        let statusIndicator =
+          indicatorsContainer.querySelector('.status-indicator');
+        if (!statusIndicator) {
+          statusIndicator = document.createElement('div');
+          indicatorsContainer.insertBefore(
+            statusIndicator,
+            indicatorsContainer.firstChild
+          );
+        }
+        statusIndicator.className = 'status-indicator no-show';
+        statusIndicator.innerHTML = '🚫 노쇼';
+
+        // 버튼 비활성화
+        const buttons = timeSlot.querySelectorAll('.status-btn');
+        buttons.forEach((btn) => (btn.disabled = true));
+
+        try {
+          const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'text/plain;charset=utf-8',
+            },
+            body: JSON.stringify({
+              action: 'updateStatus',
+              key: key,
+              status: 'noshow',
+            }),
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            showToast('노쇼 처리되었습니다.', 'success');
+            // 통계 업데이트
+            updateStats();
+          } else {
+            // 실패시 롤백
+            timeSlot.classList.remove('no-show');
+            timeSlot.classList.add(
+              oldStatus === 'completed' ? 'completed' : 'reserved'
+            );
+
+            if (allReservations[key]) {
+              allReservations[key].status = oldStatus;
+            }
+
+            // 상태 인디케이터 제거
+            if (oldStatus === 'reserved') {
+              statusIndicator.remove();
+            } else {
+              statusIndicator.className = 'status-indicator completed';
+              statusIndicator.innerHTML = '✅ 완료';
+            }
+
+            // 버튼 재활성화
+            buttons.forEach((btn) => (btn.disabled = false));
+
+            showToast(
+              '노쇼 처리 실패: ' + (result.message || '오류 발생'),
+              'error'
+            );
+          }
+        } catch (error) {
+          // 에러시 롤백
+          console.error('노쇼 처리 오류:', error);
+
+          timeSlot.classList.remove('no-show');
+          timeSlot.classList.add(
+            oldStatus === 'completed' ? 'completed' : 'reserved'
+          );
+
+          if (allReservations[key]) {
+            allReservations[key].status = oldStatus;
+          }
+
+          if (oldStatus === 'reserved') {
+            statusIndicator.remove();
+          } else {
+            statusIndicator.className = 'status-indicator completed';
+            statusIndicator.innerHTML = '✅ 완료';
+          }
+
+          buttons.forEach((btn) => (btn.disabled = false));
+
+          showToast('노쇼 처리 중 오류가 발생했습니다.', 'error');
+        } finally {
+          button.classList.remove('updating');
+          button.textContent = '🚫 노쇼 처리';
+        }
+      }
+
+      // 완료 처리 함수 - Optimistic UI 적용
+      async function markAsCompleted(key) {
+        if (!confirm('이 예약을 완료 처리하시겠습니까?')) {
+          return;
+        }
+
+        const button = event.target;
+        const timeSlot = button.closest('.time-slot');
+        const oldStatus = allReservations[key]?.status || 'reserved';
+
+        // Optimistic UI 업데이트
+        button.classList.add('updating');
+        button.textContent = '처리중...';
+
+        // 즉시 UI 변경
+        timeSlot.classList.remove('reserved', 'no-show');
+        timeSlot.classList.add('completed');
+
+        // 메모리 업데이트
+        if (allReservations[key]) {
+          allReservations[key].status = 'completed';
+        }
+
+        // 상태 인디케이터 추가
+        const indicatorsContainer = timeSlot.querySelector(
+          '.reservation-indicators'
+        );
+        let statusIndicator =
+          indicatorsContainer.querySelector('.status-indicator');
+        if (!statusIndicator) {
+          statusIndicator = document.createElement('div');
+          indicatorsContainer.insertBefore(
+            statusIndicator,
+            indicatorsContainer.firstChild
+          );
+        }
+        statusIndicator.className = 'status-indicator completed';
+        statusIndicator.innerHTML = '✅ 완료';
+
+        // 버튼 비활성화
+        const buttons = timeSlot.querySelectorAll('.status-btn');
+        buttons.forEach((btn) => (btn.disabled = true));
+
+        try {
+          const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'text/plain;charset=utf-8',
+            },
+            body: JSON.stringify({
+              action: 'updateStatus',
+              key: key,
+              status: 'completed',
+            }),
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            showToast('완료 처리되었습니다.', 'success');
+            // 통계 업데이트
+            updateStats();
+          } else {
+            // 실패시 롤백
+            timeSlot.classList.remove('completed');
+            timeSlot.classList.add(
+              oldStatus === 'noshow' ? 'no-show' : 'reserved'
+            );
+
+            if (allReservations[key]) {
+              allReservations[key].status = oldStatus;
+            }
+
+            // 상태 인디케이터 제거 또는 변경
+            if (oldStatus === 'reserved') {
+              statusIndicator.remove();
+            } else {
+              statusIndicator.className = 'status-indicator no-show';
+              statusIndicator.innerHTML = '🚫 노쇼';
+            }
+
+            // 버튼 재활성화
+            buttons.forEach((btn) => (btn.disabled = false));
+
+            showToast(
+              '완료 처리 실패: ' + (result.message || '오류 발생'),
+              'error'
+            );
+          }
+        } catch (error) {
+          // 에러시 롤백
+          console.error('완료 처리 오류:', error);
+
+          timeSlot.classList.remove('completed');
+          timeSlot.classList.add(
+            oldStatus === 'noshow' ? 'no-show' : 'reserved'
+          );
+
+          if (allReservations[key]) {
+            allReservations[key].status = oldStatus;
+          }
+
+          if (oldStatus === 'reserved') {
+            statusIndicator.remove();
+          } else {
+            statusIndicator.className = 'status-indicator no-show';
+            statusIndicator.innerHTML = '🚫 노쇼';
+          }
+
+          buttons.forEach((btn) => (btn.disabled = false));
+
+          showToast('완료 처리 중 오류가 발생했습니다.', 'error');
+        } finally {
+          button.classList.remove('updating');
+          button.textContent = '✅ 완료 처리';
+        }
+      }
+
+      // 검색 기능
+      function performSearch() {
+        const studentName = document
+          .getElementById('searchStudentName')
+          .value.trim()
+          .toLowerCase();
+        const phone = document.getElementById('searchPhone').value.trim();
+        const school = document
+          .getElementById('searchSchool')
+          .value.trim()
+          .toLowerCase();
+        const searchScope = document.querySelector(
+          'input[name="searchScope"]:checked'
+        ).value;
+
+        // 검색어가 모두 비어있으면
+        if (!studentName && !phone && !school) {
+          showToast('검색어를 입력해주세요.');
+          return;
+        }
+
+        searchActive = true;
+        searchResults = [];
+
+        // 검색 범위에 따라 예약 검색
+        const datesToSearch =
+          searchScope === 'all' ? availableDates : [currentDate];
+
+        datesToSearch.forEach((date) => {
+          const slots = getTimeSlots(date);
+          slots.forEach((time) => {
+            const key = `${date}-${time}`;
+            const reservation = allReservations[key];
+
+            if (reservation) {
+              let match = false;
+
+              // 학생명 검색
+              if (
+                studentName &&
+                reservation.studentName &&
+                reservation.studentName.toLowerCase().includes(studentName)
+              ) {
+                match = true;
+              }
+
+              // 전화번호 뒷자리 검색
+              if (phone && reservation.parentPhone) {
+                const phoneStr = String(reservation.parentPhone).replace(
+                  /-/g,
+                  ''
+                );
+                if (phoneStr.endsWith(phone)) {
+                  match = true;
+                }
+              }
+
+              // 학교 검색
+              if (
+                school &&
+                reservation.school &&
+                reservation.school.toLowerCase().includes(school)
+              ) {
+                match = true;
+              }
+
+              if (match) {
+                searchResults.push({
+                  key: key,
+                  date: date,
+                  time: time,
+                  reservation: reservation,
+                });
+              }
+            }
+          });
+        });
+
+        // 검색 결과 표시
+        displaySearchResults();
+      }
+
+      // 검색 초기화
+      function resetSearch() {
+        document.getElementById('searchStudentName').value = '';
+        document.getElementById('searchPhone').value = '';
+        document.getElementById('searchSchool').value = '';
+        document.getElementById('searchResultsInfo').style.display = 'none';
+        searchActive = false;
+        searchResults = [];
+        displaySchedule();
+      }
+
+      // 검색 결과 표시
+      function displaySearchResults() {
+        const resultsInfo = document.getElementById('searchResultsInfo');
+        const searchScope = document.querySelector(
+          'input[name="searchScope"]:checked'
+        ).value;
+
+        if (searchResults.length === 0) {
+          resultsInfo.textContent = '검색 결과가 없습니다.';
+          resultsInfo.style.display = 'block';
+
+          // 현재 날짜 검색에서 결과가 없으면
+          if (searchScope === 'current') {
+            displayNoResults();
+          } else {
+            // 전체 검색에서 결과가 없으면
+            currentDate = availableDates[0]; // 첫 날짜로 이동
+            updateDateTabs();
+            displayNoResults();
+          }
+          return;
+        }
+
+        // 검색 결과 정보 표시
+        const scopeText = searchScope === 'all' ? '전체 날짜' : '현재 날짜';
+        resultsInfo.textContent = `${scopeText}에서 ${searchResults.length}건의 예약을 찾았습니다.`;
+        resultsInfo.style.display = 'block';
+
+        // 전체 검색인 경우 모든 결과를 표시
+        if (searchScope === 'all') {
+          displayAllSearchResults();
+        } else {
+          // 현재 날짜만 검색인 경우
+          displaySchedule();
+        }
+      }
+
+      // 전체 검색 결과 표시
+      function displayAllSearchResults() {
+        const container = document.getElementById('scheduleContent');
+        const header = document.getElementById('scheduleHeader');
+        header.textContent = '전체 날짜 검색 결과';
+
+        let html = '<div class="time-slots">';
+
+        // 날짜별로 그룹화
+        const resultsByDate = {};
+        searchResults.forEach((result) => {
+          if (!resultsByDate[result.date]) {
+            resultsByDate[result.date] = [];
+          }
+          resultsByDate[result.date].push(result);
+        });
+
+        // 날짜 순서대로 표시
+        const sortedDates = Object.keys(resultsByDate).sort();
+
+        sortedDates.forEach((date, index) => {
+          // 날짜 구분선과 헤더 추가
+          html += `<div class="date-divider">
+                            <h3>${formatDateKorean(date)}</h3>
+                         </div>`;
+
+          // 해당 날짜의 검색 결과 표시
+          resultsByDate[date].forEach(({ key, time, reservation }) => {
+            html += createReservationSlotHTML(key, time, reservation, true);
+          });
+        });
+
+        html += '</div>';
+        container.innerHTML = html;
+
+        // 확장된 슬롯 복원
+        setTimeout(() => {
+          expandedSlots.forEach((key) => {
+            const slot = document.querySelector(
+              `.time-slot[onclick*="${key}"]`
+            );
+            if (slot) {
+              slot.classList.add('expanded');
+              slot.setAttribute('aria-expanded', 'true');
+            }
+          });
+        }, 100);
+      }
+
+      // 예약 슬롯 HTML 생성 함수
+      function createReservationSlotHTML(key, time, reservation, isSearchMode) {
+        // 검색어 가져오기
+        const searchStudentName = isSearchMode
+          ? document
+              .getElementById('searchStudentName')
+              .value.trim()
+              .toLowerCase()
+          : '';
+        const searchPhone = isSearchMode
+          ? document.getElementById('searchPhone').value.trim()
+          : '';
+        const searchSchool = isSearchMode
+          ? document.getElementById('searchSchool').value.trim().toLowerCase()
+          : '';
+
+        // 검색어에 따라 하이라이트 처리
+        let studentNameDisplay = reservation.studentName || '-';
+        let schoolDisplay = reservation.school || '-';
+        let phoneDisplay = formatPhone(reservation.parentPhone || '');
+
+        // 구글폼 예약 확인
+        const isGoogleForm = isGoogleFormReservation(reservation, key);
+
+        if (isSearchMode) {
+          if (searchStudentName) {
+            studentNameDisplay = highlightText(
+              studentNameDisplay,
+              searchStudentName
+            );
+          }
+          if (searchSchool) {
+            schoolDisplay = highlightText(schoolDisplay, searchSchool);
+          }
+          // 전화번호는 뒷자리만 하이라이트
+          if (searchPhone && phoneDisplay.endsWith(searchPhone)) {
+            const parts = phoneDisplay.split('-');
+            if (parts.length === 3) {
+              const lastPart = parts[2];
+              if (lastPart.includes(searchPhone)) {
+                parts[2] = highlightText(lastPart, searchPhone);
+                phoneDisplay = parts.join('-');
+              }
+            }
+          }
+        }
+
+        const hasMemo = reservation.memo && reservation.memo.trim() !== '';
+        const memoPreview = hasMemo
+          ? reservation.memo.substring(0, 50) +
+            (reservation.memo.length > 50 ? '...' : '')
+          : '';
+        const status = reservation.status || 'reserved';
+        const registrationStatus = reservation.registrationStatus || 'none';
+
+        // 상태에 따른 클래스 설정
+        let slotClass = 'time-slot reserved';
+        if (status === 'completed') {
+          slotClass = 'time-slot completed';
+        } else if (status === 'noshow') {
+          slotClass = 'time-slot no-show';
+        }
+
+        // 오늘 날짜와 비교하여 버튼 활성화 여부 결정
+        const today = getTodayString();
+        const reservationDate = key.split('-').slice(0, 3).join('-');
+        const isPast = compareDates(reservationDate, today) < 0;
+        const isCompleted = status === 'completed';
+        const isNoShow = status === 'noshow';
+
+        // 등록 상태에 따른 클래스와 텍스트
+        let regClass = 'registration-indicator';
+        let regText = getRegistrationStatusText(registrationStatus);
+
+        switch (registrationStatus) {
+          case 'confirmed':
+            regClass += ' confirmed';
+            break;
+          case 'considering':
+            regClass += ' considering';
+            break;
+          case 'not-interested':
+            regClass += ' not-interested';
+            break;
+          case 'not-eligible':
+            regClass += ' not-eligible';
+            break;
+          default:
+            regClass += ' none';
+        }
+
+        // 메모 인디케이터 ID 추가
+        const memoIndicatorId = `memo-indicator-${key}`;
+
+        return `
+                <div class="${slotClass}" 
+                     onclick="toggleMemoSection(event, '${key}')" 
+                     tabindex="0" 
+                     onkeypress="if(event.key==='Enter') toggleMemoSection(event, '${key}')"
+                     title="클릭하여 메모 ${hasMemo ? '확인' : '작성'}"
+                     role="button"
+                     aria-expanded="false"
+                     aria-label="${time} ${reservation.studentName} 예약">
+                    <div class="time-label">${time}</div>
+                    <div class="reservation-content">
+                        <div class="reservation-header">
+                            <div class="reservation-info">
+                                <div class="info-item">
+                                    <span class="info-label">학생명</span>
+                                    <span class="info-value">${
+                                      isGoogleForm
+                                        ? '<span class="google-form-badge">🏅</span>'
+                                        : ''
+                                    }${studentNameDisplay}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">학교</span>
+                                    <span class="info-value">${schoolDisplay}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">학년</span>
+                                    <span class="info-value">${
+                                      reservation.grade || '-'
+                                    }</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">연락처</span>
+                                    <span class="info-value">${phoneDisplay}</span>
+                                </div>
+                                <div class="info-item mobile-hide">
+                                    <span class="info-label">수학 선행정도</span>
+                                    <span class="info-value math-level">${
+                                      reservation.mathLevel || '-'
+                                    }</span>
+                                </div>
+                            </div>
+                            <div class="reservation-indicators">
+                                ${
+                                  isCompleted
+                                    ? '<div class="status-indicator completed">✅ 완료</div>'
+                                    : ''
+                                }
+                                ${
+                                  isNoShow
+                                    ? '<div class="status-indicator no-show">🚫 노쇼</div>'
+                                    : ''
+                                }
+                                <div id="${memoIndicatorId}" class="memo-indicator ${
+          hasMemo ? 'has-memo' : ''
+        }" ${hasMemo ? `title="${memoPreview}"` : ''}>
+                                    <span style="font-size: 10px;">📝</span> ${
+                                      hasMemo ? '메모 있음' : '메모 없음'
+                                    }
+                                </div>
+                                <div class="${regClass}" onclick="event.stopPropagation(); showRegistrationPopup('${key}')" title="클릭하여 등록 상태 변경">
+                                    ${regText}
+                                </div>
+                                <span class="expand-arrow">▼</span>
+                            </div>
+                        </div>
+                        <div class="memo-section">
+                            <div class="memo-label">📝 컨설턴트 메모</div>
+                            <textarea 
+                                class="memo-input" 
+                                id="memo-${key}"
+                                placeholder="메모를 입력하세요..."
+                                rows="2"
+                                onclick="event.stopPropagation()"
+                                onchange="trackMemoChange('${key}')">${
+          reservation.memo || ''
+        }</textarea>
+                            <div class="action-buttons">
+                                <button 
+                                    class="memo-save-btn" 
+                                    onclick="event.stopPropagation(); saveMemo('${key}', document.getElementById('memo-${key}').value, this)">
+                                    메모 저장
+                                </button>
+                                <button 
+                                    class="status-btn completed" 
+                                    onclick="event.stopPropagation(); markAsCompleted('${key}')"
+                                    ${
+                                      isPast || isCompleted || isNoShow
+                                        ? 'disabled'
+                                        : ''
+                                    }>
+                                    ✅ 완료 처리
+                                </button>
+                                <button 
+                                    class="status-btn no-show" 
+                                    onclick="event.stopPropagation(); markAsNoShow('${key}')"
+                                    ${
+                                      isPast || isCompleted || isNoShow
+                                        ? 'disabled'
+                                        : ''
+                                    }>
+                                    🚫 노쇼 처리
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+      }
+
+      // 메모 변경 추적
+      function trackMemoChange(key) {
+        const textarea = document.getElementById(`memo-${key}`);
+        const originalMemo = allReservations[key]?.memo || '';
+
+        if (textarea.value !== originalMemo) {
+          textarea.classList.add('has-unsaved-changes');
+        } else {
+          textarea.classList.remove('has-unsaved-changes');
+        }
+      }
+
+      // 검색 결과 없음 표시
+      function displayNoResults() {
+        const container = document.getElementById('scheduleContent');
+        container.innerHTML = `
+                <div class="no-search-results">
+                    <h3>검색 결과가 없습니다</h3>
+                    <p>다른 검색어로 다시 시도해보세요.</p>
+                </div>
+            `;
+      }
+
+      // 시간 슬롯 생성
+      function getTimeSlots(date) {
+        const slots = [];
+        const config = timeSlotsByDate[date] || defaultTimeConfig;
+
+        for (let minutes = config.start; minutes < config.end; minutes += 30) {
+          const hours = Math.floor(minutes / 60);
+          const mins = minutes % 60;
+          slots.push(
+            `${hours.toString().padStart(2, '0')}:${mins
+              .toString()
+              .padStart(2, '0')}`
+          );
+        }
+
+        return slots;
+      }
+
+      // 날짜 포맷팅
+      function formatDateKorean(dateStr) {
+        const parts = dateStr.split('-');
+        return `${parts[0]}년 ${parseInt(parts[1])}월 ${parseInt(parts[2])}일`;
+      }
+
+      // 간단한 날짜 포맷 (M/D)
+      function formatDateShort(dateStr) {
+        const parts = dateStr.split('-');
+        return `${parseInt(parts[1])}/${parseInt(parts[2])}`;
+      }
+
+      // 오늘 날짜 가져오기 (YYYY-MM-DD 형식)
+      function getTodayString() {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+
+      // 날짜 비교 함수
+      function compareDates(date1, date2) {
+        return new Date(date1) - new Date(date2);
+      }
+
+      // 토스트 메시지 표시
+      function showToast(message, type = 'info', duration = 2000) {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.classList.remove('error', 'success');
+
+        if (type === 'error') {
+          toast.classList.add('error');
+        } else if (type === 'success') {
+          toast.classList.add('success');
+        }
+
+        toast.classList.add('show');
+
+        setTimeout(() => {
+          toast.classList.remove('show');
+        }, duration);
+      }
+
+      // 메모 저장 함수 - Optimistic UI 적용
+      async function saveMemo(key, memo, buttonElement) {
+        const memoIndicator = document.getElementById(`memo-indicator-${key}`);
+        const originalMemo = allReservations[key]?.memo || '';
+
+        // 변경사항이 없으면 저장하지 않음
+        if (memo === originalMemo) {
+          showToast('변경사항이 없습니다.');
+          return;
+        }
+
+        // 저장 진행 중 표시
+        pendingSaves.set(key, true);
+        isEditingMemo = true;
+
+        // Optimistic UI 업데이트
+        buttonElement.classList.add('saving');
+        buttonElement.textContent = '저장중...';
+        buttonElement.disabled = true;
+
+        // 메모 인디케이터 즉시 업데이트
+        if (memoIndicator) {
+          memoIndicator.classList.add('saving');
+          if (memo.trim()) {
+            memoIndicator.classList.add('has-memo');
+            memoIndicator.innerHTML =
+              '<span style="font-size: 10px;">📝</span> 메모 있음';
+            const preview =
+              memo.substring(0, 50) + (memo.length > 50 ? '...' : '');
+            memoIndicator.setAttribute('title', preview);
+          } else {
+            memoIndicator.classList.remove('has-memo');
+            memoIndicator.innerHTML =
+              '<span style="font-size: 10px;">📝</span> 메모 없음';
+            memoIndicator.removeAttribute('title');
+          }
+        }
+
+        // 메모리에 즉시 업데이트
+        if (allReservations[key]) {
+          allReservations[key].memo = memo;
+        }
+
+        try {
+          const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'text/plain;charset=utf-8',
+            },
+            body: JSON.stringify({
+              action: 'updateMemo',
+              key: key,
+              memo: memo,
+            }),
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            buttonElement.textContent = '✓ 저장됨';
+            buttonElement.classList.add('success');
+            buttonElement.classList.remove('saving');
+
+            // unsaved changes 클래스 제거
+            const textarea = document.getElementById(`memo-${key}`);
+            if (textarea) {
+              textarea.classList.remove('has-unsaved-changes');
+            }
+
+            showToast('메모가 저장되었습니다.', 'success');
+
+            setTimeout(() => {
+              buttonElement.textContent = '메모 저장';
+              buttonElement.classList.remove('success');
+            }, 2000);
+          } else {
+            // 실패시 롤백
+            if (allReservations[key]) {
+              allReservations[key].memo = originalMemo;
+            }
+
+            // textarea 값도 롤백
+            const textarea = document.getElementById(`memo-${key}`);
+            if (textarea) {
+              textarea.value = originalMemo;
+            }
+
+            // 메모 인디케이터 롤백
+            if (memoIndicator) {
+              if (originalMemo.trim()) {
+                memoIndicator.classList.add('has-memo');
+                memoIndicator.innerHTML =
+                  '<span style="font-size: 10px;">📝</span> 메모 있음';
+                const preview =
+                  originalMemo.substring(0, 50) +
+                  (originalMemo.length > 50 ? '...' : '');
+                memoIndicator.setAttribute('title', preview);
+              } else {
+                memoIndicator.classList.remove('has-memo');
+                memoIndicator.innerHTML =
+                  '<span style="font-size: 10px;">📝</span> 메모 없음';
+                memoIndicator.removeAttribute('title');
+              }
+            }
+
+            showToast(
+              '메모 저장 실패: ' + (result.message || '오류 발생'),
+              'error'
+            );
+            buttonElement.textContent = '메모 저장';
+            buttonElement.classList.remove('saving');
+          }
+        } catch (error) {
+          // 에러시 롤백
+          console.error('메모 저장 오류:', error);
+
+          if (allReservations[key]) {
+            allReservations[key].memo = originalMemo;
+          }
+
+          const textarea = document.getElementById(`memo-${key}`);
+          if (textarea) {
+            textarea.value = originalMemo;
+          }
+
+          if (memoIndicator) {
+            if (originalMemo.trim()) {
+              memoIndicator.classList.add('has-memo');
+              memoIndicator.innerHTML =
+                '<span style="font-size: 10px;">📝</span> 메모 있음';
+              const preview =
+                originalMemo.substring(0, 50) +
+                (originalMemo.length > 50 ? '...' : '');
+              memoIndicator.setAttribute('title', preview);
+            } else {
+              memoIndicator.classList.remove('has-memo');
+              memoIndicator.innerHTML =
+                '<span style="font-size: 10px;">📝</span> 메모 없음';
+              memoIndicator.removeAttribute('title');
+            }
+          }
+
+          showToast('메모 저장 중 오류가 발생했습니다.', 'error');
+          buttonElement.textContent = '메모 저장';
+          buttonElement.classList.remove('saving');
+        } finally {
+          buttonElement.disabled = false;
+          pendingSaves.delete(key);
+          isEditingMemo = false;
+
+          // 메모 인디케이터 saving 클래스 제거
+          if (memoIndicator) {
+            memoIndicator.classList.remove('saving');
+          }
+
+          // 자동 새로고침 상태 업데이트
+          const statusEl = document.getElementById('autoRefreshStatus');
+          statusEl.textContent = '자동 새로고침: 활성';
+          statusEl.classList.remove('paused');
+        }
+      }
+
+      // 날짜 탭 업데이트
+      function updateDateTabs() {
+        const container = document.getElementById('dateTabs');
+        container.innerHTML = '';
+
+        const dates =
+          availableDates.length > 0
+            ? availableDates
+            : [
+                '2025-07-08',
+                '2025-07-15',
+                '2025-07-24',
+                '2025-07-29',
+                '2025-07-31',
+                '2025-08-02',
+                '2025-08-05',
+                '2025-08-07',
+              ];
+        const todayStr = getTodayString();
+
+        console.log('날짜 탭 업데이트:', dates);
+        console.log('오늘 날짜:', todayStr);
+
+        dates.forEach((dateStr, index) => {
+          const date = new Date(dateStr);
+          const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+          const dayName = dayNames[date.getDay()];
+
+          const slots = getTimeSlots(dateStr);
+          let availableCount = 0;
+          let reservedCount = 0;
+
+          slots.forEach((time) => {
+            const key = `${dateStr}-${time}`;
+            if (allReservations[key]) {
+              reservedCount++;
+            } else {
+              availableCount++;
+            }
+          });
+
+          let badgeText = '';
+          let badgeClass = '';
+
+          if (availableCount === 0) {
+            badgeText = '마감';
+            badgeClass = 'badge-gray';
+          } else if (availableCount <= 4) {
+            badgeText = `${availableCount}석`;
+            badgeClass = 'badge-orange';
+          } else {
+            badgeText = `${availableCount}석`;
+            badgeClass = 'badge-green';
+          }
+
+          const button = document.createElement('button');
+          button.className = 'date-tab';
+
+          // 날짜 상태 표시
+          if (dateStr === todayStr) {
+            button.classList.add('today');
+          } else if (compareDates(dateStr, todayStr) < 0) {
+            button.classList.add('past');
+          }
+
+          if (dateStr === currentDate) {
+            button.classList.add('active');
+          }
+
+          button.dataset.date = dateStr;
+          button.dataset.reserved = reservedCount;
+          button.innerHTML = `${
+            date.getMonth() + 1
+          }월 ${date.getDate()}일 (${dayName}) <span class="tab-badge ${badgeClass}">${badgeText}</span>`;
+          button.onclick = () => handleDateTabClick(dateStr);
+
+          container.appendChild(button);
+        });
+      }
+
+      // 날짜 탭 클릭 핸들러
+      function handleDateTabClick(dateStr) {
+        document.querySelectorAll('.date-tab').forEach((tab) => {
+          tab.classList.remove('active');
+          if (tab.dataset.date === dateStr) {
+            tab.classList.add('active');
+          }
+        });
+
+        currentDate = dateStr;
+
+        // 날짜 변경 시 확장된 슬롯 초기화
+        expandedSlots.clear();
+
+        // 검색 상태이면 검색 결과 재표시
+        if (searchActive) {
+          displaySearchResults();
+        } else {
+          displaySchedule();
+        }
+      }
+
+      // 가용 날짜만 별도로 가져오기
+      async function loadAvailableDates() {
+        try {
+          const response = await fetch(`${API_URL}?action=getAvailableDates`);
+          const data = await response.json();
+
+          if (data.success && data.dates) {
+            availableDates = data.dates.map((d) => d.date);
+            console.log('별도로 가져온 날짜:', availableDates);
+          }
+        } catch (error) {
+          console.error('날짜 로드 실패:', error);
+          availableDates = [
+            '2025-07-08',
+            '2025-07-15',
+            '2025-07-24',
+            '2025-07-29',
+            '2025-07-31',
+            '2025-08-02',
+            '2025-08-05',
+            '2025-08-07',
+          ];
+        }
+      }
+
+      // 데이터 로드
+      async function loadData() {
+        console.log('=== 데이터 로드 시작 ===');
+
+        // 현재 작성 중인 메모 임시 저장
+        const tempMemos = {};
+        document.querySelectorAll('.memo-input').forEach((textarea) => {
+          const key = textarea.id.replace('memo-', '');
+          if (
+            textarea.value &&
+            textarea.value !== (allReservations[key]?.memo || '')
+          ) {
+            tempMemos[key] = textarea.value;
+          }
+        });
+
+        try {
+          const response = await fetch(`${API_URL}?action=getReservations`);
+          const data = await response.json();
+
+          console.log('API 응답:', data);
+
+          if (data.success) {
+            allReservations = data.reservations || {};
+            console.log('예약 데이터:', allReservations);
+            console.log('예약 개수:', Object.keys(allReservations).length);
+
+            if (data.availableDates && data.availableDates.length > 0) {
+              availableDates = data.availableDates;
+              console.log('API에서 받은 날짜:', availableDates);
+            } else {
+              await loadAvailableDates();
+            }
+
+            updateStats();
+
+            // 검색 상태 유지
+            if (searchActive) {
+              displaySearchResults();
+            } else {
+              displaySchedule();
+            }
+
+            updateLastUpdate();
+
+            // 임시 저장된 메모 복원
+            Object.entries(tempMemos).forEach(([key, value]) => {
+              const textarea = document.getElementById(`memo-${key}`);
+              if (textarea) {
+                textarea.value = value;
+                textarea.style.backgroundColor = '#fffacd'; // 노란색 배경으로 표시
+              }
+            });
+          } else {
+            console.error('API 오류:', data);
+            allReservations = {};
+            displaySchedule();
+            resetStats();
+          }
+        } catch (error) {
+          console.error('데이터 로드 실패:', error);
+          allReservations = {};
+          displaySchedule();
+          resetStats();
+        }
+      }
+
+      // 통계 초기화
+      function resetStats() {
+        document.getElementById('totalReservations').textContent = '0';
+        document.getElementById('availableSlots').textContent = '0';
+        document.getElementById('completedConsultations').textContent = '0';
+        document.getElementById('pendingConsultations').textContent = '0';
+        document.getElementById('noShowCount').textContent = '0';
+        document.getElementById('attendanceRate').textContent = '-';
+      }
+
+      // 통계 업데이트 - 노쇼 통계 추가
+      function updateStats() {
+        console.log('=== 통계 업데이트 시작 ===');
+
+        let totalCount = 0;
+        let availableCount = 0;
+        let completedCount = 0;
+        let pendingCount = 0;
+        let noShowCount = 0;
+
+        const todayStr = getTodayString();
+        console.log('오늘 날짜:', todayStr);
+
+        const dates =
+          availableDates.length > 0
+            ? availableDates
+            : [
+                '2025-07-08',
+                '2025-07-15',
+                '2025-07-24',
+                '2025-07-29',
+                '2025-07-31',
+                '2025-08-02',
+                '2025-08-05',
+                '2025-08-07',
+              ];
+
+        let earliestDate = null;
+        let latestDate = null;
+
+        // 각 날짜별로 통계 계산
+        dates.forEach((date) => {
+          const slots = getTimeSlots(date);
+
+          slots.forEach((time) => {
+            const key = `${date}-${time}`;
+            const reservation = allReservations[key];
+
+            if (reservation) {
+              totalCount++;
+
+              // 상태별 분류
+              if (reservation.status === 'completed') {
+                completedCount++;
+              } else if (reservation.status === 'noshow') {
+                noShowCount++;
+              } else {
+                // 날짜 비교하여 예정 구분
+                if (compareDates(date, todayStr) >= 0) {
+                  pendingCount++;
+                }
+              }
+
+              // 날짜 범위 추적
+              if (!earliestDate || compareDates(date, earliestDate) < 0) {
+                earliestDate = date;
+              }
+              if (!latestDate || compareDates(date, latestDate) > 0) {
+                latestDate = date;
+              }
+            } else {
+              // 오늘 이후의 빈 슬롯만 계산
+              if (compareDates(date, todayStr) >= 0) {
+                availableCount++;
+              }
+            }
+          });
+        });
+
+        // 참석률 계산
+        const totalFinished = completedCount + noShowCount;
+        const attendanceRate =
+          totalFinished > 0
+            ? Math.round((completedCount / totalFinished) * 100)
+            : 0;
+
+        console.log('통계 결과:', {
+          totalCount,
+          availableCount,
+          completedCount,
+          pendingCount,
+          noShowCount,
+          attendanceRate,
+        });
+
+        // UI 업데이트
+        document.getElementById('totalReservations').textContent = totalCount;
+        document.getElementById('availableSlots').textContent = availableCount;
+        document.getElementById('completedConsultations').textContent =
+          completedCount;
+        document.getElementById('pendingConsultations').textContent =
+          pendingCount;
+        document.getElementById('noShowCount').textContent = noShowCount;
+        document.getElementById('attendanceRate').textContent =
+          totalFinished > 0 ? `${attendanceRate}%` : '-';
+
+        // 날짜 범위 표시
+        const completedDates = dates.filter((d) => {
+          const slots = getTimeSlots(d);
+          return slots.some((time) => {
+            const key = `${d}-${time}`;
+            return allReservations[key]?.status === 'completed';
+          });
+        });
+
+        if (completedDates.length > 0) {
+          document.getElementById(
+            'completedDateRange'
+          ).textContent = `${formatDateShort(
+            completedDates[0]
+          )} ~ ${formatDateShort(completedDates[completedDates.length - 1])}`;
+        } else {
+          document.getElementById('completedDateRange').textContent =
+            '완료된 컨설팅 없음';
+        }
+
+        if (pendingCount > 0) {
+          const pendingDates = dates.filter(
+            (d) => compareDates(d, todayStr) >= 0
+          );
+          if (pendingDates.length > 0) {
+            const isToday = pendingDates.includes(todayStr);
+            document.getElementById(
+              'pendingDateRange'
+            ).textContent = `${formatDateShort(
+              pendingDates[0]
+            )} ~ ${formatDateShort(pendingDates[pendingDates.length - 1])}${
+              isToday ? ' (오늘 포함)' : ''
+            }`;
+          }
+        } else {
+          document.getElementById('pendingDateRange').textContent =
+            '예정된 컨설팅 없음';
+        }
+
+        // 날짜 탭 업데이트
+        updateDateTabs();
+      }
+
+      // 텍스트 하이라이트 함수
+      function highlightText(text, searchTerm) {
+        if (!searchTerm || !text) return text;
+
+        // 정규식 특수문자 이스케이프
+        const escapeRegExp = (string) => {
+          return string.replace(
+            /[.*+?^${}()|[\]\\]/g,
+            '\\            // 날짜 순서대로 표시'
+          );
+        };
+
+        const escapedSearchTerm = escapeRegExp(searchTerm);
+        const regex = new RegExp(`(${escapedSearchTerm})`, 'gi');
+        return text.replace(regex, '<span class="highlight">$1</span>');
+      }
+
+      // 스케줄 표시
+      function displaySchedule() {
+        console.log('=== 스케줄 표시 시작 ===');
+        console.log('표시할 날짜:', currentDate);
+        console.log('검색 활성화:', searchActive);
+
+        try {
+          const slots = getTimeSlots(currentDate);
+          const container = document.getElementById('scheduleContent');
+
+          if (!container) {
+            console.error('scheduleContent 요소를 찾을 수 없습니다.');
+            return;
+          }
+
+          const headerText = `${formatDateKorean(currentDate)} 예약 현황`;
+          const header = document.getElementById('scheduleHeader');
+          if (header) {
+            header.textContent = headerText;
+          }
+
+          // 검색 중이고 현재 날짜에 검색 결과가 없으면
+          if (searchActive) {
+            const currentDateResults = searchResults.filter(
+              (r) => r.date === currentDate
+            );
+            if (currentDateResults.length === 0) {
+              displayNoResults();
+              return;
+            }
+          }
+
+          let html = '<div class="time-slots">';
+          let displayedCount = 0;
+
+          slots.forEach((time) => {
+            const key = `${currentDate}-${time}`;
+            const reservation = allReservations[key];
+
+            // 검색 모드일 때 필터링
+            if (searchActive && reservation) {
+              const isInSearchResults = searchResults.some(
+                (r) => r.key === key
+              );
+              if (!isInSearchResults) {
+                return; // 검색 결과에 없으면 표시하지 않음
+              }
+            }
+
+            if (reservation) {
+              displayedCount++;
+              html += createReservationSlotHTML(
+                key,
+                time,
+                reservation,
+                searchActive
+              );
+            } else if (!searchActive) {
+              // 검색 모드가 아닐 때만 빈 슬롯 표시
+              html += `
+                            <div class="time-slot empty">
+                                <div class="time-label">${time}</div>
+                                <div class="empty-slot">예약 가능</div>
+                            </div>
+                        `;
+            }
+          });
+
+          html += '</div>';
+          container.innerHTML = html;
+          console.log(`스케줄 표시 완료: ${displayedCount}건의 예약 표시됨`);
+
+          // 확장된 슬롯 복원
+          setTimeout(() => {
+            expandedSlots.forEach((key) => {
+              const slot = document.querySelector(
+                `.time-slot[onclick*="${key}"]`
+              );
+              if (slot) {
+                slot.classList.add('expanded');
+                slot.setAttribute('aria-expanded', 'true');
+              }
+            });
+          }, 100);
+        } catch (error) {
+          console.error('스케줄 표시 오류:', error);
+          const container = document.getElementById('scheduleContent');
+          if (container) {
+            container.innerHTML =
+              '<div class="no-data">스케줄 표시 중 오류가 발생했습니다.</div>';
+          }
+        }
+      }
+
+      // 전화번호 포맷팅
+      function formatPhone(phone) {
+        if (!phone) return '';
+        const phoneStr = String(phone);
+        const cleaned = phoneStr.replace(/[^0-9]/g, '');
+
+        // 앞자리 0이 빠진 경우 추가
+        let formatted = cleaned;
+        if (cleaned.length === 10 && !cleaned.startsWith('0')) {
+          formatted = '0' + cleaned;
+        }
+
+        if (formatted.length === 11) {
+          return `${formatted.substr(0, 3)}-${formatted.substr(
+            3,
+            4
+          )}-${formatted.substr(7, 4)}`;
+        }
+        return phoneStr;
+      }
+
+      // 마지막 업데이트 시간
+      function updateLastUpdate() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('ko-KR');
+        const dateStr = now.toLocaleDateString('ko-KR');
+        document.getElementById(
+          'lastUpdate'
+        ).textContent = `마지막 업데이트: ${dateStr} ${timeStr}`;
+      }
+
+      // Enter 키로 검색, ESC 키로 확장 닫기
+      document.addEventListener('DOMContentLoaded', function () {
+        const searchInputs = [
+          'searchStudentName',
+          'searchPhone',
+          'searchSchool',
+        ];
+        searchInputs.forEach((id) => {
+          document
+            .getElementById(id)
+            .addEventListener('keypress', function (e) {
+              if (e.key === 'Enter') {
+                performSearch();
+              }
+            });
+        });
+
+        // ESC 키로 확장된 슬롯 닫기
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') {
+            const expandedSlot = document.querySelector('.time-slot.expanded');
+            if (expandedSlot) {
+              expandedSlot.classList.remove('expanded');
+              expandedSlot.setAttribute('aria-expanded', 'false');
+              const match = expandedSlot
+                .getAttribute('onclick')
+                ?.match(/'([^']+)'/);
+              if (match && match[1]) {
+                expandedSlots.delete(match[1]);
+              }
+            }
+          }
+        });
+      });
+
+      // 페이지 언로드 시 정리
+      window.addEventListener('beforeunload', function (e) {
+        stopAutoRefresh();
+
+        // 저장하지 않은 메모가 있는지 확인
+        let hasUnsavedMemo = false;
+        document.querySelectorAll('.memo-input').forEach((textarea) => {
+          const key = textarea.id.replace('memo-', '');
+          const originalMemo = allReservations[key]?.memo || '';
+          if (textarea.value !== originalMemo) {
+            hasUnsavedMemo = true;
+          }
+        });
+
+        if (hasUnsavedMemo || pendingSaves.size > 0) {
+          const message =
+            '저장하지 않은 변경사항이 있습니다. 페이지를 떠나시겠습니까?';
+          e.preventDefault();
+          e.returnValue = message;
+          return message;
+        }
+      });
+
+      // 초기 로드
+      console.log('=== 페이지 초기화 ===');
+      console.log('현재 시간:', new Date().toString());
+      updateDateTabs();
+      loadData();
+    </script>
+  </body>
+</html>
